@@ -10,10 +10,16 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class VoterResource extends Resource
 {
     protected static ?string $model = Voter::class;
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['tps']);
+    }
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
 
