@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { createTps, updateTps, deleteTps } from './tps-actions'
 import { useRouter } from 'next/navigation'
+import { useToast, ToastContainer } from '../components/Toast'
 
 type TpsItem = {
   id: number
@@ -23,6 +24,7 @@ export default function TpsClient({ initialData }: { initialData: TpsItem[] }) {
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState<TpsItem | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const { toasts, toast, removeToast } = useToast()
 
   const filtered = initialData.filter(
     (t) =>
@@ -39,7 +41,9 @@ export default function TpsClient({ initialData }: { initialData: TpsItem[] }) {
         : await createTps(formData)
       if (res.error) {
         setFormError(res.error)
+        toast.error(res.error)
       } else {
+        toast.success(editItem ? 'TPS berhasil diperbarui.' : 'TPS baru berhasil ditambahkan.')
         setShowForm(false)
         setEditItem(null)
         router.refresh()
@@ -51,8 +55,13 @@ export default function TpsClient({ initialData }: { initialData: TpsItem[] }) {
     if (!confirm('Yakin ingin menghapus TPS ini? Data pemilih di TPS ini juga akan terhapus.')) return
     startTransition(async () => {
       const res = await deleteTps(id)
-      if (res.error) alert(res.error)
-      else router.refresh()
+      if (res.error) {
+        alert(res.error)
+        toast.error(res.error)
+      } else {
+        toast.success('TPS berhasil dihapus.')
+        router.refresh()
+      }
     })
   }
 
@@ -70,6 +79,7 @@ export default function TpsClient({ initialData }: { initialData: TpsItem[] }) {
 
   return (
     <div>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">Data TPS</h1>

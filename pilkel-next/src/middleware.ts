@@ -10,8 +10,14 @@ const COOKIE_NAME = 'pilkel_session'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow login page and public routes
-  if (pathname === '/admin/login' || pathname === '/') {
+  // Allow login page, public routes, and static assets
+  if (
+    pathname === '/admin/login' ||
+    pathname === '/' ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    /\.(?:ico|png|jpg|jpeg|svg|css|js)$/.test(pathname)
+  ) {
     return NextResponse.next()
   }
 

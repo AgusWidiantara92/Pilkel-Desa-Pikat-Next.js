@@ -2,8 +2,15 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { getSession } from '@/lib/auth'
+
+async function canManageTps() {
+  const user = await getSession()
+  return user && ['admin', 'panitia'].includes(user.role)
+}
 
 export async function getTpsList() {
+  if (!await canManageTps()) throw new Error('Unauthorized')
   return prisma.tps.findMany({
     include: { _count: { select: { voters: true } } },
     orderBy: { nomor_tps: 'asc' },
@@ -11,6 +18,7 @@ export async function getTpsList() {
 }
 
 export async function createTps(formData: FormData) {
+  if (!await canManageTps()) return { error: 'Anda tidak memiliki akses.' }
   const nomor_tps = (formData.get('nomor_tps') as string)?.trim()
   const nama_lokasi = (formData.get('nama_lokasi') as string)?.trim()
   const dusun = (formData.get('dusun') as string)?.trim() || null
@@ -36,6 +44,7 @@ export async function createTps(formData: FormData) {
 }
 
 export async function updateTps(id: number, formData: FormData) {
+  if (!await canManageTps()) return { error: 'Anda tidak memiliki akses.' }
   const nomor_tps = (formData.get('nomor_tps') as string)?.trim()
   const nama_lokasi = (formData.get('nama_lokasi') as string)?.trim()
   const dusun = (formData.get('dusun') as string)?.trim() || null
@@ -62,6 +71,7 @@ export async function updateTps(id: number, formData: FormData) {
 }
 
 export async function deleteTps(id: number) {
+  if ((await getSession())?.role !== 'admin') return { error: 'Hanya administrator yang dapat menghapus TPS.' }
   try {
     await prisma.tps.delete({ where: { id } })
     revalidatePath('/admin/tps')

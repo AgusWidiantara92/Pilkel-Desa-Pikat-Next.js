@@ -2,8 +2,14 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { getSession } from '@/lib/auth'
 
 const PAGE_SIZE = 20
+
+async function canManageVoters() {
+  const user = await getSession()
+  return user && ['admin', 'panitia'].includes(user.role)
+}
 
 export async function getVoters(params: {
   page?: number
@@ -12,6 +18,7 @@ export async function getVoters(params: {
   status?: string
   dusun?: string
 }) {
+  if (!await canManageVoters()) throw new Error('Unauthorized')
   const { page = 1, search, tpsId, status, dusun } = params
 
   const where: Record<string, unknown> = {}
@@ -41,6 +48,7 @@ export async function getVoters(params: {
 }
 
 export async function getFilterOptions() {
+  if (!await canManageVoters()) throw new Error('Unauthorized')
   const [tpsList, dusunList] = await Promise.all([
     prisma.tps.findMany({ select: { id: true, nomor_tps: true }, orderBy: { nomor_tps: 'asc' } }),
     prisma.voter.findMany({ where: { dusun: { not: null } }, select: { dusun: true }, distinct: ['dusun'] }),
@@ -49,13 +57,14 @@ export async function getFilterOptions() {
 }
 
 export async function createVoter(formData: FormData) {
+  if (!await canManageVoters()) return { error: 'Anda tidak memiliki akses.' }
   const data = {
     nkk: (formData.get('nkk') as string)?.trim(),
     nik: (formData.get('nik') as string)?.trim(),
     nama: (formData.get('nama') as string)?.trim(),
     jenis_kelamin: (formData.get('jenis_kelamin') as string) || 'L',
     tempat_lahir: (formData.get('tempat_lahir') as string)?.trim() || null,
-    tanggal_lahir: formData.get('tanggal_lahir') ? new Date(formData.get('tanggal_lahir') as string) : null,
+    tanggal_lahir: (formData.get('tanggal_lahir') as string) || null,
     status_perkawinan: (formData.get('status_perkawinan') as string) || 'B',
     dusun: (formData.get('dusun') as string)?.trim() || null,
     tps_id: parseInt(formData.get('tps_id') as string),
@@ -81,13 +90,14 @@ export async function createVoter(formData: FormData) {
 }
 
 export async function updateVoter(id: number, formData: FormData) {
+  if (!await canManageVoters()) return { error: 'Anda tidak memiliki akses.' }
   const data = {
     nkk: (formData.get('nkk') as string)?.trim(),
     nik: (formData.get('nik') as string)?.trim(),
     nama: (formData.get('nama') as string)?.trim(),
     jenis_kelamin: (formData.get('jenis_kelamin') as string) || 'L',
     tempat_lahir: (formData.get('tempat_lahir') as string)?.trim() || null,
-    tanggal_lahir: formData.get('tanggal_lahir') ? new Date(formData.get('tanggal_lahir') as string) : null,
+    tanggal_lahir: (formData.get('tanggal_lahir') as string) || null,
     status_perkawinan: (formData.get('status_perkawinan') as string) || 'B',
     dusun: (formData.get('dusun') as string)?.trim() || null,
     tps_id: parseInt(formData.get('tps_id') as string),
@@ -113,6 +123,7 @@ export async function updateVoter(id: number, formData: FormData) {
 }
 
 export async function deleteVoter(id: number) {
+  if ((await getSession())?.role !== 'admin') return { error: 'Hanya administrator yang dapat menghapus pemilih.' }
   try {
     await prisma.voter.delete({ where: { id } })
     revalidatePath('/admin/voters')
@@ -127,6 +138,7 @@ export async function bulkImportVoters(rows: Array<{
   tempat_lahir?: string; tanggal_lahir?: string; status_perkawinan?: string
   dusun?: string; tps_id: number; alamat?: string; status?: string; keterangan?: string
 }>) {
+  if (!await canManageVoters()) return { imported: 0, skipped: rows.length, errors: ['Anda tidak memiliki akses.'] }
   let imported = 0
   let skipped = 0
   const errors: string[] = []
@@ -140,7 +152,7 @@ export async function bulkImportVoters(rows: Array<{
           nama: row.nama,
           jenis_kelamin: row.jenis_kelamin || 'L',
           tempat_lahir: row.tempat_lahir || null,
-          tanggal_lahir: row.tanggal_lahir ? new Date(row.tanggal_lahir) : null,
+          tanggal_lahir: row.tanggal_lahir || null,
           status_perkawinan: row.status_perkawinan || 'B',
           dusun: row.dusun || null,
           tps_id: row.tps_id,
@@ -154,7 +166,7 @@ export async function bulkImportVoters(rows: Array<{
           nama: row.nama,
           jenis_kelamin: row.jenis_kelamin || 'L',
           tempat_lahir: row.tempat_lahir || null,
-          tanggal_lahir: row.tanggal_lahir ? new Date(row.tanggal_lahir) : null,
+          tanggal_lahir: row.tanggal_lahir || null,
           status_perkawinan: row.status_perkawinan || 'B',
           dusun: row.dusun || null,
           tps_id: row.tps_id,

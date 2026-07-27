@@ -1,6 +1,44 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { headers } from 'next/headers'
+
+// ── Simple In-Memory Rate Limiter ──
+// Mirrors Laravel's 'throttle:search-dpt' middleware
+const RATE_LIMIT_MAX = 10 // max requests
+const RATE_LIMIT_WINDOW = 60_000 // per 60 seconds (ms)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
+    return true
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return false
+  }
+
+  entry.count++
+  return true
+}
+
+// Periodically clean up stale entries (every 5 minutes)
+if (typeof globalThis !== 'undefined') {
+  const CLEANUP_KEY = '__rateLimitCleanup'
+  if (!(globalThis as Record<string, unknown>)[CLEANUP_KEY]) {
+    ;(globalThis as Record<string, unknown>)[CLEANUP_KEY] = true
+    setInterval(() => {
+      const now = Date.now()
+      for (const [key, val] of rateLimitMap) {
+        if (now > val.resetAt) rateLimitMap.delete(key)
+      }
+    }, 5 * 60_000)
+  }
+}
 
 export interface SearchResult {
   success: boolean
@@ -44,6 +82,16 @@ function maskName(name: string): string {
 }
 
 export async function searchDpt(formData: FormData): Promise<SearchResult> {
+  // Rate limit check
+  const headerList = await headers()
+  const clientIp = headerList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  if (!checkRateLimit(clientIp)) {
+    return {
+      success: false,
+      error: 'Terlalu banyak permintaan. Silakan tunggu beberapa saat sebelum mencoba lagi.',
+    }
+  }
+
   const nikInput = formData.get('nik')
 
   if (!nikInput || typeof nikInput !== 'string') {

@@ -27,7 +27,7 @@ model Voter {
   nik               String    @unique
   nama              String
   tempat_lahir      String?
-  tanggal_lahir     DateTime?
+  tanggal_lahir     String?
   jenis_kelamin     String    // L / P
   status_perkawinan String    @default("B") // B / S / P
   alamat            String?
