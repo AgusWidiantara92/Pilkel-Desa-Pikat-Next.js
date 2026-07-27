@@ -133,6 +133,43 @@ export async function deleteVoter(id: number) {
   }
 }
 
+export async function deleteVoters(ids: number[]) {
+  if ((await getSession())?.role !== 'admin') return { error: 'Hanya administrator yang dapat menghapus pemilih.' }
+  if (!ids.length) return { error: 'Tidak ada data pemilih yang dipilih.' }
+  try {
+    const res = await prisma.voter.deleteMany({
+      where: { id: { in: ids } },
+    })
+    revalidatePath('/admin/voters')
+    return { success: true, count: res.count }
+  } catch {
+    return { error: 'Gagal menghapus pemilih terdaftar.' }
+  }
+}
+
+export async function deleteAllVoters(filter?: { search?: string; tpsId?: number; status?: string; dusun?: string }) {
+  if ((await getSession())?.role !== 'admin') return { error: 'Hanya administrator yang dapat menghapus pemilih.' }
+  try {
+    const where: Record<string, unknown> = {}
+    if (filter?.search) {
+      where.OR = [
+        { nik: { contains: filter.search } },
+        { nama: { contains: filter.search } },
+        { nkk: { contains: filter.search } },
+      ]
+    }
+    if (filter?.tpsId) where.tps_id = filter.tpsId
+    if (filter?.status) where.status = filter.status
+    if (filter?.dusun) where.dusun = filter.dusun
+
+    const res = await prisma.voter.deleteMany({ where })
+    revalidatePath('/admin/voters')
+    return { success: true, count: res.count }
+  } catch {
+    return { error: 'Gagal menghapus semua data pemilih.' }
+  }
+}
+
 export async function bulkImportVoters(rows: Array<{
   nkk: string; nik: string; nama: string; jenis_kelamin: string
   tempat_lahir?: string; tanggal_lahir?: string; status_perkawinan?: string

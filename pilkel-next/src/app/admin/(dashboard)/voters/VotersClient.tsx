@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef, useCallback } from 'react'
-import { createVoter, deleteVoter, getVoters, updateVoter } from './voter-actions'
+import { createVoter, deleteVoter, deleteVoters, deleteAllVoters, getVoters, updateVoter } from './voter-actions'
 import { importExcelData, type ImportResult } from './excel-import-action'
 import { useToast, ToastContainer } from '../components/Toast'
 
@@ -20,13 +20,13 @@ function Field({
   label, name, type = 'text', ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) {
   return (
-    <label className="block text-sm font-semibold text-gray-700">
+    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
       {label}
       <input
         name={name}
         type={type}
         {...props}
-        className="mt-1 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-normal text-gray-900 placeholder-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+        className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-sm font-normal text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
       />
     </label>
   )
@@ -36,12 +36,12 @@ function Select({
   label, name, options, ...props
 }: { label: string; name: string; options: string[][] } & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <label className="block text-sm font-semibold text-gray-700">
+    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
       {label}
       <select
         name={name}
         {...props}
-        className="mt-1 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-normal text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+        className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-sm font-normal text-gray-900 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
       >
         <option value="">Pilih {label}</option>
         {options.map(([value, text]) => (
@@ -73,6 +73,9 @@ export default function VotersClient({
   const [isPending, startTransition] = useTransition()
   const { toasts, toast, removeToast } = useToast()
 
+  // Bulk Selection state
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+
   // Excel Import state
   const [showImport, setShowImport] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -92,6 +95,7 @@ export default function VotersClient({
         dusun: dusun || undefined,
       })
       setData(results)
+      setSelectedIds([])
     })
   }, [search, tpsId, status, dusun, startTransition])
 
@@ -123,7 +127,64 @@ export default function VotersClient({
         toast.error(response.error)
       } else {
         toast.success('Data pemilih berhasil dihapus.')
+        setSelectedIds((prev) => prev.filter((i) => i !== id))
         load(data.voters.length === 1 && data.page > 1 ? data.page - 1 : data.page)
+      }
+    })
+  }
+
+  // ── Bulk Delete Handlers ──
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(data.voters.map((v) => v.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelectOne = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    )
+  }
+
+  const handleBulkDelete = () => {
+    if (!selectedIds.length) return
+    if (!window.confirm(`Yakin ingin menghapus ${selectedIds.length} data pemilih yang dipilih?`)) return
+
+    startTransition(async () => {
+      const response = await deleteVoters(selectedIds)
+      if (response.error) {
+        toast.error(response.error)
+      } else {
+        toast.success(`${response.count} data pemilih berhasil dihapus.`)
+        setSelectedIds([])
+        load(data.page)
+      }
+    })
+  }
+
+  const handleDeleteAllMatching = () => {
+    const isFiltered = Boolean(search || tpsId || status || dusun)
+    const confirmMsg = isFiltered
+      ? `PERINGATAN KETAT! Yakin ingin menghapus SELURUH data pemilih hasil filter (${data.total.toLocaleString('id-ID')} pemilih)?`
+      : `PERINGATAN SANGAT KETAT! Yakin ingin menghapus SELURUH DATABASE DPT (${data.total.toLocaleString('id-ID')} pemilih)? Data tidak dapat dikembalikan!`
+
+    if (!window.confirm(confirmMsg)) return
+
+    startTransition(async () => {
+      const response = await deleteAllVoters({
+        search: search.trim() || undefined,
+        tpsId: tpsId ? Number(tpsId) : undefined,
+        status: status || undefined,
+        dusun: dusun || undefined,
+      })
+      if (response.error) {
+        toast.error(response.error)
+      } else {
+        toast.success(`Berhasil menghapus ${response.count} data DPT.`)
+        setSelectedIds([])
+        load(1)
       }
     })
   }
@@ -213,12 +274,12 @@ export default function VotersClient({
       {/* ═══ Page Header ═══ */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900">Data Pemilih (DPT)</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">Data Pemilih (DPT)</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Kelola daftar pemilih tetap Desa Pikat — {data.total.toLocaleString('id-ID')} pemilih terdaftar
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => { setShowImport(true); setImportResult(null); setImportFile(null) }}
             className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
@@ -237,12 +298,51 @@ export default function VotersClient({
             </svg>
             Tambah Pemilih
           </button>
+          <button
+            onClick={handleDeleteAllMatching}
+            className="px-3.5 py-2.5 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 text-sm font-medium transition-all duration-200 flex items-center gap-1.5"
+            title="Hapus semua DPT sesuai filter atau seluruh database"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            {search || tpsId || status || dusun ? 'Hapus Hasil Filter' : 'Kosongkan DPT'}
+          </button>
         </div>
       </div>
 
+      {/* ═══ Bulk Action Floating Bar ═══ */}
+      {selectedIds.length > 0 && (
+        <div className="mb-4 p-3 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-between animate-fade-in-up">
+          <div className="flex items-center gap-2 px-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-sm font-bold text-red-700 dark:text-red-300">
+              {selectedIds.length} data pemilih dipilih
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-all"
+            >
+              Batal Pilih
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow transition-all flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+              Hapus {selectedIds.length} Data
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ═══ Error Banner ═══ */}
       {error && !showForm && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center gap-2 animate-fade-in-up">
+        <div className="mb-4 rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-3 text-sm text-red-700 dark:text-red-400 flex items-center gap-2 animate-fade-in-up">
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -251,18 +351,18 @@ export default function VotersClient({
       )}
 
       {/* ═══ Filters ═══ */}
-      <div className="mb-4 grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-4 grid gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 p-4 sm:grid-cols-2 lg:grid-cols-5">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && load()}
           placeholder="Cari nama, NIK, NKK..."
-          className="rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm placeholder-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all lg:col-span-2"
+          className="rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all lg:col-span-2"
         />
         <select
           value={tpsId}
           onChange={(e) => setTpsId(e.target.value)}
-          className="rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+          className="rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
         >
           <option value="">Semua TPS</option>
           {filters.tpsList.map((t) => (
@@ -272,7 +372,7 @@ export default function VotersClient({
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+          className="rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
         >
           <option value="">Semua status</option>
           <option value="aktif">Aktif</option>
@@ -281,7 +381,7 @@ export default function VotersClient({
         <button
           onClick={() => load()}
           disabled={isPending}
-          className="rounded-xl bg-gray-900 hover:bg-gray-800 px-4 py-2.5 text-sm font-bold text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          className="rounded-xl bg-gray-900 dark:bg-gray-100 hover:bg-gray-800 dark:hover:bg-gray-200 px-4 py-2.5 text-sm font-bold text-white dark:text-gray-900 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isPending ? 'Memuat...' : 'Cari'}
         </button>
@@ -289,7 +389,7 @@ export default function VotersClient({
           <select
             value={dusun}
             onChange={(e) => setDusun(e.target.value)}
-            className="rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+            className="rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
           >
             <option value="">Semua dusun</option>
             {filters.dusunList.map((item) => (
@@ -308,19 +408,19 @@ export default function VotersClient({
           onClick={closeForm}
         >
           <div
-            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 sm:p-8 shadow-2xl animate-fade-in-up"
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white dark:bg-gray-800 p-6 sm:p-8 shadow-2xl animate-fade-in-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                   {editing ? 'Edit Pemilih' : 'Tambah Pemilih Baru'}
                 </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   {editing ? 'Perbarui data pemilih yang sudah ada' : 'Isi data pemilih yang akan didaftarkan'}
                 </p>
               </div>
-              <button onClick={closeForm} className="text-gray-400 hover:text-gray-600 p-1">
+              <button onClick={closeForm} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -328,7 +428,7 @@ export default function VotersClient({
             </div>
 
             {error && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 font-medium animate-fade-in-up">
+              <div className="mb-4 rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-3 text-sm text-red-700 dark:text-red-400 font-medium animate-fade-in-up">
                 {error}
               </div>
             )}
@@ -361,22 +461,22 @@ export default function VotersClient({
                 options={[['aktif', 'Aktif'], ['tms', 'TMS']]}
               />
 
-              <label className="sm:col-span-2 block text-sm font-semibold text-gray-700">
+              <label className="sm:col-span-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Alamat
                 <textarea
                   name="alamat"
                   defaultValue={editing?.alamat ?? ''}
                   rows={2}
-                  className="mt-1 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                  className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-sm font-normal text-gray-900 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                 />
               </label>
-              <label className="sm:col-span-2 block text-sm font-semibold text-gray-700">
+              <label className="sm:col-span-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Keterangan
                 <textarea
                   name="keterangan"
                   defaultValue={editing?.keterangan ?? ''}
                   rows={2}
-                  className="mt-1 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                  className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2.5 text-sm font-normal text-gray-900 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                 />
               </label>
 
@@ -384,7 +484,7 @@ export default function VotersClient({
                 <button
                   type="button"
                   onClick={closeForm}
-                  className="flex-1 rounded-xl border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                  className="flex-1 rounded-xl border border-gray-300 dark:border-gray-600 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
                 >
                   Batal
                 </button>
@@ -410,17 +510,17 @@ export default function VotersClient({
           onClick={closeImport}
         >
           <div
-            className="w-full max-w-lg rounded-2xl bg-white p-6 sm:p-8 shadow-2xl animate-fade-in-up"
+            className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-800 p-6 sm:p-8 shadow-2xl animate-fade-in-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">Import Data DPT</h2>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Import Data DPT</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   Upload file Excel (.xlsx) dengan format DPT standar
                 </p>
               </div>
-              <button onClick={closeImport} className="text-gray-400 hover:text-gray-600 p-1">
+              <button onClick={closeImport} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -431,10 +531,10 @@ export default function VotersClient({
             <div
               className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200 ${
                 dragOver
-                  ? 'border-emerald-400 bg-emerald-50'
+                  ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30'
                   : importFile
-                    ? 'border-emerald-300 bg-emerald-50/50'
-                    : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+                    ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20'
+                    : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:border-gray-400 dark:hover:border-gray-500'
               }`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
@@ -456,30 +556,30 @@ export default function VotersClient({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                   </div>
-                  <p className="text-sm font-bold text-gray-900">{importFile.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{importFile.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {(importFile.size / 1024).toFixed(1)} KB — klik untuk ganti file
                   </p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-gray-400 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
                   </div>
-                  <p className="text-sm font-medium text-gray-700">
-                    Drag & drop file Excel, atau <span className="text-emerald-600 font-bold">klik di sini</span>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Drag & drop file Excel, atau <span className="text-emerald-600 dark:text-emerald-400 font-bold">klik di sini</span>
                   </p>
-                  <p className="text-xs text-gray-400">Format: .xlsx atau .xls — Setiap sheet = 1 TPS</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Format: .xlsx atau .xls — Setiap sheet = 1 TPS</p>
                 </div>
               )}
             </div>
 
             {/* Format Info */}
-            <div className="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-100">
-              <p className="text-xs font-bold text-blue-800 mb-1">📋 Format Kolom Excel</p>
-              <p className="text-xs text-blue-700 leading-relaxed">
+            <div className="mt-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800">
+              <p className="text-xs font-bold text-blue-800 dark:text-blue-300 mb-1">📋 Format Kolom Excel</p>
+              <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
                 B: NKK &bull; D: NIK &bull; F: Nama &bull; G: Tempat Lahir &bull; H: Tgl Lahir &bull; I: Status Kawin &bull; J: JK &bull; K: Alamat
               </p>
             </div>
@@ -506,10 +606,10 @@ export default function VotersClient({
                     </div>
                   )}
                   <div>
-                    <p className="text-sm font-bold text-gray-900">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
                       {importResult.imported > 0 ? 'Import Berhasil!' : 'Import Gagal'}
                     </p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       {importResult.imported.toLocaleString('id-ID')} data diimport
                       {importResult.skipped > 0 && ` • ${importResult.skipped} dilewati`}
                     </p>
@@ -537,7 +637,7 @@ export default function VotersClient({
               <button
                 type="button"
                 onClick={closeImport}
-                className="flex-1 rounded-xl border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                className="flex-1 rounded-xl border border-gray-300 dark:border-gray-600 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
               >
                 {importResult ? 'Tutup' : 'Batal'}
               </button>
@@ -568,11 +668,19 @@ export default function VotersClient({
       {/* ═══════════════════════════════════════════════ */}
       {/* TABLE: Voter List                              */}
       {/* ═══════════════════════════════════════════════ */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+              <tr className="bg-gray-50 dark:bg-gray-700/50 text-left text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <th className="px-4 py-3 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={data.voters.length > 0 && selectedIds.length === data.voters.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500 cursor-pointer"
+                  />
+                </th>
                 <th className="px-5 py-3 font-semibold">Nama / NIK</th>
                 <th className="px-5 py-3 font-semibold">JK</th>
                 <th className="px-5 py-3 font-semibold">Dusun</th>
@@ -581,33 +689,48 @@ export default function VotersClient({
                 <th className="px-5 py-3 font-semibold text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {data.voters.map((voter) => (
-                <tr key={voter.id} className="hover:bg-gray-50/80 transition-colors">
+                <tr
+                  key={voter.id}
+                  className={`transition-colors ${
+                    selectedIds.includes(voter.id)
+                      ? 'bg-red-50/60 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30'
+                      : 'hover:bg-gray-50/80 dark:hover:bg-gray-700/30'
+                  }`}
+                >
+                  <td className="px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(voter.id)}
+                      onChange={() => handleSelectOne(voter.id)}
+                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-5 py-3">
-                    <p className="font-bold text-gray-900">{voter.nama}</p>
-                    <p className="font-mono text-xs text-gray-500 mt-0.5">{voter.nik}</p>
+                    <p className="font-bold text-gray-900 dark:text-gray-100">{voter.nama}</p>
+                    <p className="font-mono text-xs text-gray-500 dark:text-gray-400 mt-0.5">{voter.nik}</p>
                   </td>
                   <td className="px-5 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${
                       voter.jenis_kelamin === 'L'
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'bg-pink-50 text-pink-700'
+                        ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                        : 'bg-pink-50 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300'
                     }`}>
                       {voter.jenis_kelamin}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-gray-600">{voter.dusun || '-'}</td>
+                  <td className="px-5 py-3 text-gray-600 dark:text-gray-300">{voter.dusun || '-'}</td>
                   <td className="px-5 py-3">
-                    <span className="rounded-md bg-green-50 px-2 py-1 text-xs font-bold text-green-700">
+                    <span className="rounded-md bg-green-50 dark:bg-green-900/30 px-2 py-1 text-xs font-bold text-green-700 dark:text-green-400">
                       {voter.tps.nomor_tps}
                     </span>
                   </td>
                   <td className="px-5 py-3">
                     <span className={`rounded-md px-2 py-1 text-xs font-bold ${
                       voter.status === 'aktif'
-                        ? 'bg-green-50 text-green-700'
-                        : 'bg-red-50 text-red-700'
+                        ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                        : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                     }`}>
                       {voter.status === 'aktif' ? 'Aktif' : 'TMS'}
                     </span>
@@ -616,7 +739,7 @@ export default function VotersClient({
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => { setEditing(voter); setShowForm(true); setError(null) }}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
                         title="Edit"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -625,7 +748,7 @@ export default function VotersClient({
                       </button>
                       <button
                         onClick={() => remove(voter.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
                         title="Hapus"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -638,12 +761,12 @@ export default function VotersClient({
               ))}
               {data.voters.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center">
+                  <td colSpan={7} className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-10 h-10 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                       </svg>
-                      <p className="text-sm text-gray-400 font-medium">Tidak ada data pemilih</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 font-medium">Tidak ada data pemilih</p>
                     </div>
                   </td>
                 </tr>
@@ -653,25 +776,25 @@ export default function VotersClient({
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3 text-sm">
-          <span className="text-gray-500">
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 px-5 py-3 text-sm">
+          <span className="text-gray-500 dark:text-gray-400">
             {data.total.toLocaleString('id-ID')} pemilih
           </span>
           <div className="flex items-center gap-2">
             <button
               disabled={data.page <= 1 || isPending}
               onClick={() => load(data.page - 1)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               Sebelumnya
             </button>
-            <span className="px-2 py-1.5 text-gray-500 text-sm">
+            <span className="px-2 py-1.5 text-gray-500 dark:text-gray-400 text-sm">
               {data.page} / {data.totalPages || 1}
             </span>
             <button
               disabled={data.page >= data.totalPages || isPending}
               onClick={() => load(data.page + 1)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               Berikutnya
             </button>

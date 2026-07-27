@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getCurrentUser } from '../auth-actions'
 import { redirect } from 'next/navigation'
 import AdminShell from '../AdminShell'
+import { ThemeProvider } from './components/ThemeProvider'
 
 export const metadata: Metadata = {
   title: {
@@ -22,5 +23,9 @@ export default async function AdminLayout({
     redirect('/admin/login')
   }
 
-  return <AdminShell user={user}>{children}</AdminShell>
+  return (
+    <ThemeProvider>
+      <AdminShell user={user}>{children}</AdminShell>
+    </ThemeProvider>
+  )
 }

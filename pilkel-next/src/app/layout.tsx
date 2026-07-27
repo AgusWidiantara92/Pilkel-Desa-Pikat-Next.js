@@ -13,14 +13,30 @@ export const metadata: Metadata = {
   description: "Cek lokasi TPS Pemilihan Perbekel Desa Pikat 2026 berdasarkan NIK. Sistem resmi Panitia Pilkel Desa Pikat, Kecamatan Dawan, Kabupaten Klungkung, Bali.",
 };
 
+// Inline script to prevent flash of wrong theme before React hydrates
+const themeScript = `
+  (function() {
+    try {
+      var stored = localStorage.getItem('theme');
+      var isDark = stored === 'dark' ||
+        (!stored || stored === 'system') &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.add(isDark ? 'dark' : 'light');
+    } catch(e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`h-full antialiased ${inter.variable}`}>
-      <body className="min-h-full flex flex-col font-sans bg-gray-100 selection:bg-red-500 selection:text-white">
+    <html lang="id" className={`h-full antialiased ${inter.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="min-h-full flex flex-col font-sans bg-gray-100 dark:bg-gray-900 selection:bg-red-500 selection:text-white transition-colors duration-200">
         {children}
       </body>
     </html>
