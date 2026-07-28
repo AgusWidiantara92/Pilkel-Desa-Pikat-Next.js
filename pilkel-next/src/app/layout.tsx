@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -34,9 +35,13 @@ export default function RootLayout({
   return (
     <html lang="id" className={`h-full antialiased ${inter.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
       </head>
-      <body className="min-h-full flex flex-col font-sans bg-gray-100 dark:bg-gray-900 selection:bg-red-500 selection:text-white transition-colors duration-200">
+      <body className="min-h-full flex flex-col font-sans bg-white selection:bg-red-600 selection:text-white">
         {children}
       </body>
     </html>

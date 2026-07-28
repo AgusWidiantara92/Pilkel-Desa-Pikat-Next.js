@@ -361,7 +361,7 @@ export default function Home() {
       {/* ═══════════════════════════════════════════════ */}
       {/* FOOTER                                         */}
       {/* ═══════════════════════════════════════════════ */}
-      <footer className="w-full py-6 text-center mt-auto">
+      <footer className="w-full py-6 text-center mt-auto bg-white border-t border-red-100">
         <p className="text-xs text-gray-400 font-medium">
           Sistem Cek Data Pemilih Pemilihan Perbekel Desa Pikat
         </p>
