@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from './auth-actions'
@@ -56,6 +56,21 @@ export default function AdminShell({
 }) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    const handleUnload = () => {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/auth/logout')
+      } else {
+        fetch('/api/auth/logout', { method: 'POST', keepalive: true })
+      }
+    }
+
+    window.addEventListener('pagehide', handleUnload)
+    return () => {
+      window.removeEventListener('pagehide', handleUnload)
+    }
+  }, [])
 
   const filteredNav = navItems.filter(
     (item) => !item.adminOnly || user.role === 'admin'
