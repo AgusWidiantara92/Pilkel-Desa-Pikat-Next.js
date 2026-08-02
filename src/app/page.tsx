@@ -215,13 +215,8 @@ export default function Home() {
               {result.voter.status.toLowerCase() === 'tms' ? (
                 /* TAMPILAN WARNING UNTUK TMS */
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 sm:p-6">
-                  {/* Icon Exclamation Mark + Judul */}
+                  {/* Judul */}
                   <div className="text-center mb-5">
-                    <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3 ring-4 ring-amber-200/50">
-                      <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                      </svg>
-                    </div>
                     <h3 className="text-base font-bold text-amber-900">Data Pemilih Ditemukan</h3>
                     <p className="text-xs text-amber-700 mt-0.5">Status: Tidak Memenuhi Syarat (TMS)</p>
                   </div>
@@ -276,13 +271,8 @@ export default function Home() {
               ) : (
                 /* TAMPILAN NORMAL (AKTIF) - HIJAU */
                 <div className="bg-green-50 border border-green-200 rounded-2xl p-5 sm:p-6">
-                  {/* Icon Centang Hijau + Judul */}
+                  {/* Judul */}
                   <div className="text-center mb-5">
-                    <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3 ring-4 ring-green-200/50">
-                      <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/>
-                      </svg>
-                    </div>
                     <h3 className="text-base font-bold text-green-900">Data Pemilih Ditemukan</h3>
                     <p className="text-xs text-green-700 mt-0.5">Berikut informasi lokasi TPS Anda</p>
                   </div>
@@ -328,13 +318,6 @@ export default function Home() {
           {result && result.success && result.notFound && (
             <div className="mt-6 pt-6 border-t border-gray-100 animate-fade-in-up">
               <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
-                {/* Icon Peringatan */}
-                <div className="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                  </svg>
-                </div>
-
                 <h3 className="text-base font-bold text-red-900 mb-4">NIK tidak terdaftar dalam DPT.</h3>
 
                 {/* Tombol Hubungi Panitia (WhatsApp) */}
