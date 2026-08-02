@@ -276,7 +276,7 @@ export default function VotersClient({
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-gray-100">Data Pemilih (DPT)</h1>
           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Kelola daftar pemilih tetap Desa Pikat — {data.total.toLocaleString('id-ID')} pemilih terdaftar
+            Kelola daftar pemilih tetap Desa Pikat ({data.total.toLocaleString('id-ID')} pemilih terdaftar)
           </p>
         </div>
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -571,7 +571,7 @@ export default function VotersClient({
                   </div>
                   <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{importFile.name}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {(importFile.size / 1024).toFixed(1)} KB — klik untuk ganti file
+                    {(importFile.size / 1024).toFixed(1)} KB • klik untuk ganti file
                   </p>
                 </div>
               ) : (
@@ -584,7 +584,7 @@ export default function VotersClient({
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Drag & drop file Excel, atau <span className="text-emerald-600 dark:text-emerald-400 font-bold">klik di sini</span>
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Format: .xlsx atau .xls — Setiap sheet = 1 TPS</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Format: .xlsx atau .xls • Setiap sheet = 1 TPS</p>
                 </div>
               )}
             </div>

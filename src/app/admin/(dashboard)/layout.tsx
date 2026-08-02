@@ -6,8 +6,8 @@ import { ThemeProvider } from './components/ThemeProvider'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s — Admin Pilkel',
-    default: 'Dashboard — Admin Pilkel',
+    template: '%s | Admin Pilkel',
+    default: 'Dashboard | Admin Pilkel',
   },
   description: 'Panel administrasi Pemilihan Perbekel Desa Pikat 2026',
 }

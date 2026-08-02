@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Cek DPT — Pilkel Desa Pikat 2026",
+  title: "Cek DPT | Pilkel Desa Pikat 2026",
   description: "Cek lokasi TPS Pemilihan Perbekel Desa Pikat 2026 berdasarkan NIK. Sistem resmi Panitia Pilkel Desa Pikat, Kecamatan Dawan, Kabupaten Klungkung, Bali.",
 };
 

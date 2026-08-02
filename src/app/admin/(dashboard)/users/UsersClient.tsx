@@ -116,7 +116,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: User[] }) 
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">Pengguna &amp; Panitia</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Kelola akses panel administrasi — {users.length} pengguna terdaftar
+            Kelola akses panel administrasi ({users.length} pengguna terdaftar)
           </p>
         </div>
         <button

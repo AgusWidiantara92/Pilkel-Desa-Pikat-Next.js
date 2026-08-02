@@ -24,45 +24,21 @@ export default async function DashboardPage() {
       label: 'Total TPS',
       value: totalTps,
       color: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 ring-blue-200/50 dark:ring-blue-700/30',
-      iconBg: 'bg-blue-100 dark:bg-blue-900/40',
-      icon: (
-        <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-        </svg>
-      ),
     },
     {
       label: 'Total Pemilih',
       value: totalVoters,
       color: 'bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 ring-purple-200/50 dark:ring-purple-700/30',
-      iconBg: 'bg-purple-100 dark:bg-purple-900/40',
-      icon: (
-        <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-      ),
     },
     {
       label: 'Pemilih Aktif',
       value: totalAktif,
       color: 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 ring-green-200/50 dark:ring-green-700/30',
-      iconBg: 'bg-green-100 dark:bg-green-900/40',
-      icon: (
-        <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-      ),
     },
     {
       label: 'Pemilih TMS',
       value: totalTms,
       color: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 ring-amber-200/50 dark:ring-amber-700/30',
-      iconBg: 'bg-amber-100 dark:bg-amber-900/40',
-      icon: (
-        <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-        </svg>
-      ),
     },
   ]
 
@@ -80,9 +56,6 @@ export default async function DashboardPage() {
             key={s.label}
             className={`${s.color} rounded-2xl p-5 ring-1 transition-all hover:shadow-md`}
           >
-            <div className={`w-10 h-10 ${s.iconBg} rounded-xl flex items-center justify-center mb-3`}>
-              {s.icon}
-            </div>
             <p className="text-2xl font-extrabold">{s.value.toLocaleString('id-ID')}</p>
             <p className="text-xs font-medium mt-0.5 opacity-80">{s.label}</p>
           </div>

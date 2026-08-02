@@ -254,7 +254,7 @@ export default function Home() {
 
                   <p className="text-center text-xs text-amber-600 mt-4 font-semibold">
                     Status: Tidak Memenuhi Syarat (TMS)
-                    {result.voter.keterangan && !result.voter.keterangan.toLowerCase().includes('imported via excel') && ` — ${result.voter.keterangan}`}
+                    {result.voter.keterangan && !result.voter.keterangan.toLowerCase().includes('imported via excel') && ` • ${result.voter.keterangan}`}
                   </p>
 
                   {result.whatsappUrl && (
@@ -315,7 +315,7 @@ export default function Home() {
 
                   <p className="text-center text-xs text-green-600 mt-4 font-medium">
                     Status: {result.voter.status.charAt(0).toUpperCase() + result.voter.status.slice(1)}
-                    {result.voter.keterangan && !result.voter.keterangan.toLowerCase().includes('imported via excel') && ` — ${result.voter.keterangan}`}
+                    {result.voter.keterangan && !result.voter.keterangan.toLowerCase().includes('imported via excel') && ` • ${result.voter.keterangan}`}
                   </p>
                 </div>
               )}
